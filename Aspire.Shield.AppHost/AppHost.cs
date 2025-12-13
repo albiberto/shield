@@ -1,8 +1,16 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddAzureRedis("cache");
+var cache = builder
+    .AddAzureRedis("cache")
+    .RunAsContainer(resourceBuilder =>
+        resourceBuilder
+            .WithRedisInsight()
+            .WithLifetime(ContainerLifetime.Persistent)
+            .WithDataVolume(isReadOnly: false)
+            .WithPersistence(TimeSpan.FromMinutes(1), 100));
 
-var sqlServer = builder.AddSqlServer("sqlserver")
+var sqlServer = builder
+    .AddSqlServer("sqlserver")
     .WithDataVolume()
     .AddDatabase("sampledb");
 
