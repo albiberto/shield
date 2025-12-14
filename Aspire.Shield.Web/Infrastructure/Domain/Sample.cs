@@ -1,3 +1,3 @@
 namespace Aspire.Shield.Web.Infrastructure.Domain;
 
-public record Sample(int Id, string BusinessUnit, string Branch, int Count);
+public record Sample(string BusinessUnit, string Branch, int Count, int Id = 0);

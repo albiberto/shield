@@ -1,7 +1,49 @@
 ﻿@page "/"
+@using Aspire.Shield.Web.Model
+@using Aspire.Shield.Web.Services
+@inherits ComponentBase
+@implements IAsyncDisposable
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>PoC</h1>
 
-Welcome to your new app.
+@if (_current.Any())
+{
+    <ul>
+        @foreach (var item in _current)
+        {
+            <li>@item.Key: @item.Value.Count</li>
+        }
+    </ul>
+}
+else
+{
+    <p>In attesa di dati...</p>
+}
+
+@code {
+    [Inject] public required ReactiveService ReactiveService { get; set; }
+
+    private IAsyncDisposable? _subscription;
+    private readonly Dictionary<string, SampleModel> _current = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _subscription = await ReactiveService.Observable
+            .SubscribeAsync(sample =>
+            {
+                _current[sample.Key] = sample;
+                InvokeAsync(StateHasChanged);
+                return ValueTask.CompletedTask;
+            });
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_subscription is not null)
+        {
+            await _subscription.DisposeAsync();
+        }
+    }
+}

@@ -4,6 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <UserSecretsId>04ab82a3-ac4b-4fde-99ef-5bb3f0a66035</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,10 +15,13 @@
         <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.0.2"/>
         <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.0.2" />
         <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="13.0.2" />
+        <PackageReference Include="LinqAsync" Version="1.1.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Polly" Version="8.6.5" />
+        <PackageReference Include="System.Reactive.Async" Version="6.0.0-alpha.18" />
     </ItemGroup>
 
 </Project>
