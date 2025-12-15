@@ -22,7 +22,7 @@ public class SourceWorker(ReactiveService reactive, IServiceProvider services, I
                     var context = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
                     var result = await context.Samples
-                        .Select(sample => new SampleModel(sample.BusinessUnit, sample.Branch, sample.Count))
+                        .Select(sample => new SampleModel.WithCount(sample.BusinessUnit, sample.Branch, sample.Count))
                         .ToListAsync(stoppingToken);
 
                     return result;
