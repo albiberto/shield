@@ -22,7 +22,7 @@
                     @{
                         var dbModel = new SampleModel.WithCount(item.BusinessUnit, item.Branch, item.Count.Value);
                     }
-                    <DatabaseCard Model="@dbModel"/>
+                    <DatabaseCard Model="@dbModel" IsLocked="@IsLocked(item)"/>
                 </div>
             }
 
@@ -101,6 +101,8 @@ else
                 return current;
         }
     }
+
+    private bool IsLocked(DashboardItem item) => _current.TryGetValue(item.Key, out var existing) && existing.State is SampleModel.StateEnum.Enqueued or SampleModel.StateEnum.Processing;
 
     public async ValueTask DisposeAsync()
     {
