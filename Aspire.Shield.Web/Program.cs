@@ -1,36 +1,36 @@
 using Aspire.Shield.ServiceDefaults;
 using Aspire.Shield.Web.Components;
+using Aspire.Shield.Web.DevSpace;
 using Aspire.Shield.Web.Infrastructure;
 using Aspire.Shield.Web.Services;
 using Aspire.Shield.Web.Workers;
-using Aspire.Shield.Web.Workers.Simulators;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add service defaults & Aspire client integrations.
+// Add services to the container.
+builder.Services
+    .AddRazorComponents()
+    .AddInteractiveServerComponents();
+
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
-builder.AddRedisDistributedCache("cache");
-// SQL SERVER - MODIFICA QUI
-// Invece di chiamarlo e basta, configuriamo le opzioni di resilienza
+
+// Entity Framework & Database Migration Worker
+builder.Services.AddHostedService<DatabaseMigrationWorker>();
 builder.AddSqlServerDbContext<ApplicationContext>("sampledb", settings =>
 {
-    // Abilita i tentativi automatici in caso di fallimento temporaneo
     settings.DisableRetry = false;
-
-    // Aumenta il timeout dei comandi (utile all'avvio quando il PC è sotto carico)
     settings.CommandTimeout = 45;
 });
 
-builder.Services.AddSingleton<ReactiveService>();
-builder.Services.AddHostedService<CacheWorker>();
-builder.Services.AddHostedService<SourceWorker>();
-builder.Services.AddHostedService<DatabaseMigrationWorker>();
+// Simulators
+builder.Services.AddSingleton<SimulatorOptions>();
 builder.Services.AddHostedService<UserSimulatorWorker>();
+builder.Services.AddSingleton<HangfireFilterSimulatorWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<HangfireFilterSimulatorWorker>());
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+// Application Services
+builder.Services.AddSingleton<ReactiveService>();
+builder.Services.AddHostedService<SourceWorker>();
 
 var app = builder.Build();
 
@@ -42,16 +42,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAntiforgery();
-
-app.UseOutputCache();
 
 app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-app.MapDefaultEndpoints();
 
 app.Run();

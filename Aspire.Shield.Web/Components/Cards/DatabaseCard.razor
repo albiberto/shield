@@ -1,0 +1,30 @@
+﻿@using Aspire.Shield.Web.DevSpace
+@using Aspire.Shield.Web.Model
+<div class="card border-primary shadow-sm h-100">
+    <div class="card-body">
+        <h5 class="card-title">@Model.BusinessUnit</h5>
+        <h6 class="card-subtitle mb-2 text-muted">@Model.Branch</h6>
+        
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="fs-4 fw-bold text-dark">
+                @Model.Count <small class="fs-6 text-muted fw-normal">items</small>
+            </span>
+            
+            @* Il bottone notifica il padre tramite la callback *@
+            <button class="btn btn-primary" 
+                    @onclick="@OnConfirm"
+                    disabled="@IsLocked">
+                Confirm <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required SampleModel.WithCount Model { get; set; }
+    
+    [Parameter] public bool IsLocked { get; set; }
+
+    [Inject] private HangfireFilterSimulatorWorker HangfireFilterSimulatorWorker { get; set; } = null!;
+    public void OnConfirm() => HangfireFilterSimulatorWorker.EnqueueJob(Model);
+}

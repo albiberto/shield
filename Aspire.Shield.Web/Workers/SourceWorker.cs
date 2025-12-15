@@ -17,7 +17,6 @@ public class SourceWorker(ReactiveService reactive, IServiceProvider services, I
             {
                 try
                 {
-                    // Uniformato con CreateAsyncScope
                     await using var scope = services.CreateAsyncScope();
                     var context = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 

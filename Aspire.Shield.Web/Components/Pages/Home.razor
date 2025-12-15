@@ -1,7 +1,9 @@
 ﻿@page "/"
 @inherits ComponentBase
+@using System.Collections.Concurrent
 @using Aspire.Shield.Web.Model
 @using Aspire.Shield.Web.Services
+@using Aspire.Shield.Web.Components.Cards
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
@@ -11,44 +13,63 @@
 
 @if (_current.Any())
 {
-    <ul>
-        @foreach (var item in _current)
+    <div class="row g-3">
+        @foreach (var item in _current.Values.OrderBy(x => x.Key))
         {
-            if(item.Value is SampleModel.WithCount withCount)
-            {
-                <li>@item.Key: @withCount.Count</li>
-            }
+            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                @switch (item)
+                {
+                    case SampleModel.WithCount model:
+                        <Aspire.Shield.Web.Components.Cards.DatabaseCard Model="@model"/>
+                        break;
+
+                    case SampleModel.WithState model:
+                        <Aspire.Shield.Web.Components.Cards.HangfireCard Model="@model"/>
+                        break;
+                        
+                    default:
+                        <div class="card">
+                            <div class="card-body">
+                                <p class="card-text">Tipo sconosciuto: @item.Key</p>
+                            </div>
+                        </div>
+                        break;
+                }
+            </div>
         }
-    </ul>
+    </div>
 }
 else
 {
-    <p>In attesa di dati...</p>
+    <p>Loading ...</p>
 }
 
 @code {
     [Inject] public required ReactiveService ReactiveService { get; set; }
 
     private IAsyncDisposable? _subscription;
-    private readonly Dictionary<string, SampleModel> _current = new();
+    private readonly ConcurrentDictionary<string, SampleModel> _current = new();
 
     protected override async Task OnInitializedAsync()
     {
         _subscription = await ReactiveService.Observable
-            .SubscribeAsync(sample =>
+            .SubscribeAsync(async sample =>
             {
-                _current[sample.Key] = sample;
-                InvokeAsync(StateHasChanged);
-                return ValueTask.CompletedTask;
+                if (sample is SampleModel.WithState { State: SampleModel.StateEnum.Completed })
+                {
+                    _current.TryRemove(sample.Key, out _); 
+                }
+                else
+                {
+                    _current[sample.Key] = sample;
+                }
+
+                await InvokeAsync(StateHasChanged);
             });
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_subscription is not null)
-        {
-            await _subscription.DisposeAsync();
-        }
+        if (_subscription is not null) await _subscription.DisposeAsync();
     }
-
 }

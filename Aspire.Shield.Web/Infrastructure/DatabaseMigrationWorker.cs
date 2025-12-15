@@ -1,8 +1,7 @@
-﻿using Aspire.Shield.Web.Infrastructure;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Polly;
 
-namespace Aspire.Shield.Web.Workers;
+namespace Aspire.Shield.Web.Infrastructure;
 
 public sealed class DatabaseMigrationWorker(IServiceProvider services, ILogger<DatabaseMigrationWorker> logger) : BackgroundService
 {

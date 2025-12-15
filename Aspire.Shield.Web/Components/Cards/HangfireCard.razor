@@ -1,0 +1,42 @@
+﻿@using Aspire.Shield.Web.Model
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-body position-relative overflow-hidden">
+        <div class="position-absolute top-0 start-0 bottom-0 border-start border-5 @GetBorderColor()"></div>
+
+        <div class="ps-2">
+            <h5 class="card-title">@Model.BusinessUnit</h5>
+            <h6 class="card-subtitle mb-3 text-muted">@Model.Branch</h6>
+
+            <div class="d-flex align-items-center">
+    <span class="badge @GetBadgeColor() rounded-pill px-3 py-2">
+    @if (Model.State == SampleModel.StateEnum.Processing)
+        {
+            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        }
+        @Model.State
+    </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] [EditorRequired] public required SampleModel.WithState Model { get; set; }
+
+    private string GetBadgeColor() => Model.State switch
+    {
+        SampleModel.StateEnum.Enqueued => "bg-secondary",
+        SampleModel.StateEnum.Processing => "bg-warning text-dark",
+        SampleModel.StateEnum.Completed => "bg-success",
+        _ => "bg-light"
+    };
+
+    private string GetBorderColor() => Model.State switch
+    {
+        SampleModel.StateEnum.Enqueued => "border-secondary",
+        SampleModel.StateEnum.Processing => "border-warning",
+        SampleModel.StateEnum.Completed => "border-success",
+        _ => "border-light"
+    };
+
+}
