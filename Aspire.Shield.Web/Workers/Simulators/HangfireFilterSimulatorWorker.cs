@@ -1,4 +1,4 @@
-﻿namespace Aspire.Shield.Web.Workers;
+﻿namespace Aspire.Shield.Web.Workers.Simulators;
 
 public class HangfireFilterSimulatorWorker : BackgroundService
 {

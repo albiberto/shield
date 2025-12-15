@@ -1,7 +1,7 @@
 ﻿@page "/"
+@inherits ComponentBase
 @using Aspire.Shield.Web.Model
 @using Aspire.Shield.Web.Services
-@inherits ComponentBase
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
@@ -47,4 +47,5 @@ else
             await _subscription.DisposeAsync();
         }
     }
+
 }

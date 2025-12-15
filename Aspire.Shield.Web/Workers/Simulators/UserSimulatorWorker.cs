@@ -2,13 +2,13 @@
 using Aspire.Shield.Web.Infrastructure.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace Aspire.Shield.Web.Workers;
+namespace Aspire.Shield.Web.Workers.Simulators;
 
 public class UserSimulatorWorker(IServiceProvider services, ILogger<UserSimulatorWorker> logger) : BackgroundService
 {
+    private readonly HashSet<string> _branches = ["Trieste", "Gallarate", "Padova"];
     private readonly HashSet<string> _businessUnits = ["Finance", "HR", "IT", "Marketing", "Sales"];
-    private readonly HashSet<string> _branches = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix"];
-    
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("DatabaseProducerWorker avviato.");
@@ -22,31 +22,29 @@ public class UserSimulatorWorker(IServiceProvider services, ILogger<UserSimulato
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
                 foreach (var branch in _branches)
+                foreach (var unit in _businessUnits)
                 {
-                    foreach (var unit in _businessUnits)
+                    if (stoppingToken.IsCancellationRequested) break;
+
+                    var old = await context.Samples.SingleOrDefaultAsync(
+                        s => s.BusinessUnit == unit && s.Branch == branch,
+                        stoppingToken);
+
+                    if (old is null)
                     {
-                        if (stoppingToken.IsCancellationRequested) break;
-
-                        var old = await context.Samples.SingleOrDefaultAsync(
-                            s => s.BusinessUnit == unit && s.Branch == branch, 
-                            cancellationToken: stoppingToken);
-
-                        if (old is null)
-                        {
-                            var @new = new Sample(unit, branch, 0);
-                            await context.AddAsync(@new, stoppingToken);
-                        }
-                        else
-                        {
-                            // Nota: Entity Framework traccia già l'entità, Update non è strettamente necessario se modifichi le proprietà, 
-                            // ma va bene lasciarlo per esplicitezza.
-                            var updated = old with { Count = Random.Shared.Next(10, 100) };
-                            context.Entry(old).CurrentValues.SetValues(updated);
-                        }
-
-                        await context.SaveChangesAsync(stoppingToken);
-                        await Task.Delay(500, stoppingToken);
+                        var @new = new Sample(unit, branch, 0);
+                        await context.AddAsync(@new, stoppingToken);
                     }
+                    else
+                    {
+                        // Nota: Entity Framework traccia già l'entità, Update non è strettamente necessario se modifichi le proprietà, 
+                        // ma va bene lasciarlo per esplicitezza.
+                        var updated = old with { Count = Random.Shared.Next(10, 100) };
+                        context.Entry(old).CurrentValues.SetValues(updated);
+                    }
+
+                    await context.SaveChangesAsync(stoppingToken);
+                    await Task.Delay(500, stoppingToken);
                 }
             }
         }

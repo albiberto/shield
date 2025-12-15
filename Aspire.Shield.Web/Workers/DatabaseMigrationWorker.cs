@@ -12,32 +12,27 @@ public sealed class DatabaseMigrationWorker(IServiceProvider services, ILogger<D
 
         var policy = Policy
             .Handle<Exception>()
-            .WaitAndRetryAsync(
-                retryCount: 10,
-                sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                onRetry: (exception, timeSpan, retryCount, _) => 
-                    logger.LogWarning(exception, "Migrazione DB fallita. Riprovo tra {TimeSpan} secondi (Tentativo {RetryCount}/10)", timeSpan.TotalSeconds, retryCount));
+            .WaitAndRetryAsync(10, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (exception, timeSpan, retryCount, _) => logger.LogWarning(exception, "Migrazione DB fallita. Riprovo tra {TimeSpan} secondi (Tentativo {RetryCount}/10)", timeSpan.TotalSeconds, retryCount));
 
         try
         {
             await policy.ExecuteAsync(async token =>
             {
-                // Uniformato con CreateAsyncScope come negli altri worker suggeriti
                 await using var scope = services.CreateAsyncScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
                 await db.Database.MigrateAsync(token);
             }, stoppingToken);
-            
+
             logger.LogInformation("Migrazione DB completata con successo.");
         }
         catch (OperationCanceledException)
         {
-            // Stop grazioso durante la migrazione
+            // Managed Stop
         }
         catch (Exception ex)
         {
             logger.LogCritical(ex, "Database migration failed definitively after 10 retries.");
-            throw; // Rilanciare qui è corretto se vogliamo che l'app fallisca all'avvio
+            throw;
         }
         finally
         {

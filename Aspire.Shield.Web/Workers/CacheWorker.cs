@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Aspire.Shield.Web.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using static System.Threading.Tasks.Task;
@@ -15,11 +17,11 @@ public class CacheWorker(ReactiveService reactive, IDistributedCache cache, ILog
 
         _subscription = await reactive.Observable.SubscribeAsync(async sample =>
         {
-            try 
+            try
             {
-                var json = System.Text.Json.JsonSerializer.Serialize(sample);
-                var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-                await cache.SetAsync(CacheKey, bytes, token: stoppingToken);
+                var json = JsonSerializer.Serialize(sample);
+                var bytes = Encoding.UTF8.GetBytes(json);
+                await cache.SetAsync(CacheKey, bytes, stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

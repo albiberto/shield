@@ -1,3 +1,5 @@
+using Projects;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // --- REDIS ---
@@ -12,7 +14,7 @@ var cache = builder
 // Usa una sola definizione pulita. 
 // Nota: Se usi AddAzureSqlServer ma vuoi testare in locale, RunAsContainer è corretto.
 // Tuttavia, spesso si usa semplicemente builder.AddSqlServer("sql") per coerenza locale.
-var sqlServer = builder.AddAzureSqlServer("azuresql") 
+var sqlServer = builder.AddAzureSqlServer("azuresql")
     .RunAsContainer(config =>
     {
         config.WithLifetime(ContainerLifetime.Persistent); // Ottimo per evitare riavvii lenti
@@ -23,7 +25,7 @@ var sqlServer = builder.AddAzureSqlServer("azuresql")
 var sampleDb = sqlServer.AddDatabase("sampledb");
 
 // --- FRONTEND ---
-builder.AddProject<Projects.Aspire_Shield_Web>("webfrontend")
+builder.AddProject<Aspire_Shield_Web>("webfrontend")
     .WithExternalHttpEndpoints()
     // .WithHttpHealthCheck("/health") // <-- Rimuovi o commenta temporaneamente se fallisce qui
     .WithReference(cache)

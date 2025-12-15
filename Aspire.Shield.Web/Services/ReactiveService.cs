@@ -10,7 +10,7 @@ public class ReactiveService : IDisposable
 
     public IAsyncObservable<SampleModel> Observable => _subject.ToAsyncObservable();
 
-    public void OnNext(SampleModel sample) => _subject.OnNext(sample);
-
     public void Dispose() => _subject.Dispose();
+
+    public void OnNext(SampleModel sample) => _subject.OnNext(sample);
 }

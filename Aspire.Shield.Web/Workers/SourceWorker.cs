@@ -24,7 +24,7 @@ public class SourceWorker(ReactiveService reactive, IServiceProvider services, I
                     var result = await context.Samples
                         .Select(sample => new SampleModel(sample.BusinessUnit, sample.Branch, sample.Count))
                         .ToListAsync(stoppingToken);
-                    
+
                     return result;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -35,10 +35,7 @@ public class SourceWorker(ReactiveService reactive, IServiceProvider services, I
             })
             .Where(list => list.Count > 0) // Evita di emettere liste vuote in caso di errore
             .SelectMany(list => list)
-            .Subscribe(
-                onNext: reactive.OnNext,
-                onError: ex => logger.LogCritical(ex, "Errore critico nello stream Rx.") 
-            );
+            .Subscribe(reactive.OnNext, ex => logger.LogCritical(ex, "Errore critico nello stream Rx."));
 
         try
         {

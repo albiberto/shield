@@ -1,10 +1,9 @@
-using Aspire.Shield.Web;
+using Aspire.Shield.ServiceDefaults;
 using Aspire.Shield.Web.Components;
 using Aspire.Shield.Web.Infrastructure;
 using Aspire.Shield.Web.Services;
 using Aspire.Shield.Web.Workers;
-using Microsoft.EntityFrameworkCore;
-
+using Aspire.Shield.Web.Workers.Simulators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,10 +16,10 @@ builder.AddRedisDistributedCache("cache");
 builder.AddSqlServerDbContext<ApplicationContext>("sampledb", settings =>
 {
     // Abilita i tentativi automatici in caso di fallimento temporaneo
-    settings.DisableRetry = false; 
-    
+    settings.DisableRetry = false;
+
     // Aumenta il timeout dei comandi (utile all'avvio quando il PC è sotto carico)
-    settings.CommandTimeout = 45; 
+    settings.CommandTimeout = 45;
 });
 
 builder.Services.AddSingleton<ReactiveService>();
@@ -37,7 +36,7 @@ var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
