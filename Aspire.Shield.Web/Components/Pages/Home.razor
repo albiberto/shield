@@ -9,67 +9,110 @@
 
 <PageTitle>Home</PageTitle>
 
-<h1>PoC</h1>
+<h1>PoC Dashboard</h1>
 
 @if (_current.Any())
 {
     <div class="row g-3">
-        @foreach (var item in _current.Values.OrderBy(x => x.Key))
+        @foreach (var item in _current.Values.OrderBy(x => x.Branch).ThenBy(x => x.BusinessUnit))
         {
-            <div class="col-12 col-md-6 col-lg-4 col-xl-3">
-                @switch (item)
-                {
-                    case SampleModel.WithCount model:
-                        <Aspire.Shield.Web.Components.Cards.DatabaseCard Model="@model"/>
-                        break;
+            @* DatabaseCard - se abbiamo dati dal DB *@
+            @if (item.Count.HasValue)
+            {
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    @{
+                        var dbModel = new SampleModel.WithCount(item.BusinessUnit, item.Branch, item.Count.Value);
+                    }
+                    <DatabaseCard Model="@dbModel"/>
+                </div>
+            }
 
-                    case SampleModel.WithState model:
-                        <Aspire.Shield.Web.Components.Cards.HangfireCard Model="@model"/>
-                        break;
-                        
-                    default:
-                        <div class="card">
-                            <div class="card-body">
-                                <p class="card-text">Tipo sconosciuto: @item.Key</p>
-                            </div>
-                        </div>
-                        break;
-                }
-            </div>
+            @* HangfireCard - se abbiamo uno stato attivo *@
+            @if (item.State.HasValue)
+            {
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    @{
+                        var hfModel = new SampleModel.WithState(item.BusinessUnit, item.Branch, item.State.Value);
+                    }
+                    <HangfireCard Model="@hfModel"/>
+                </div>
+            }
         }
     </div>
 }
 else
 {
-    <p>Loading ...</p>
+    <div class="alert alert-info">
+        <div class="spinner-border spinner-border-sm me-2"></div> In attesa di dati...
+    </div>
 }
 
 @code {
     [Inject] public required ReactiveService ReactiveService { get; set; }
 
     private IAsyncDisposable? _subscription;
-    private readonly ConcurrentDictionary<string, SampleModel> _current = new();
+    
+    // Usiamo il ViewModel locale invece del modello grezzo
+    private readonly ConcurrentDictionary<string, DashboardItem> _current = new();
 
     protected override async Task OnInitializedAsync()
     {
         _subscription = await ReactiveService.Observable
             .SubscribeAsync(async sample =>
             {
-                if (sample is SampleModel.WithState { State: SampleModel.StateEnum.Completed })
-                {
-                    _current.TryRemove(sample.Key, out _); 
-                }
-                else
-                {
-                    _current[sample.Key] = sample;
-                }
+                _current.AddOrUpdate(
+                    key: sample.Key,
+                    // SE NUOVO: Creiamo l'item inizializzandolo con i dati che abbiamo
+                    addValueFactory: k => CreateNewItem(sample),
+                    // SE ESISTE: Aggiorniamo (mergiando) i dati esistenti con quelli nuovi
+                    updateValueFactory: (k, current) => MergeItem(current, sample)
+                );
 
                 await InvokeAsync(StateHasChanged);
             });
     }
 
+    private DashboardItem CreateNewItem(SampleModel sample)
+    {
+        return sample switch
+        {
+            SampleModel.WithCount c => new DashboardItem(c.BusinessUnit, c.Branch) { Count = c.Count },
+            SampleModel.WithState s => new DashboardItem(s.BusinessUnit, s.Branch) { State = s.State },
+            _ => new DashboardItem(sample.BusinessUnit, sample.Branch)
+        };
+    }
+
+    private DashboardItem MergeItem(DashboardItem current, SampleModel sample)
+    {
+        // NOTA: Qui usiamo 'record' con 'with' per immutabilità thread-safe
+        switch (sample)
+        {
+            case SampleModel.WithCount c:
+                return current with { Count = c.Count };
+
+            case SampleModel.WithState s:
+                // Se lo stato è Completed, resettiamo lo stato a null (pulizia) ma manteniamo il record e il Count
+                if (s.State == SampleModel.StateEnum.Completed)
+                {
+                    return current with { State = null };
+                }
+                return current with { State = s.State };
+                
+            default:
+                return current;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_subscription is not null) await _subscription.DisposeAsync();
+    }
+
+    // ViewModel locale per gestire il merge
+    private sealed record DashboardItem(string BusinessUnit, string Branch)
+    {
+        public string Key => $"{BusinessUnit}-{Branch}";
+        public int? Count { get; init; }
+        public SampleModel.StateEnum? State { get; init; }
     }
 }

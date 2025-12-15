@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using Aspire.Shield.Web.Model;
 using Aspire.Shield.Web.Services;
+using static System.Threading.Tasks.Task;
 
 namespace Aspire.Shield.Web.DevSpace;
 
@@ -23,6 +24,7 @@ public class HangfireFilterSimulatorWorker(ReactiveService reactive, ILogger<Han
             try
             {
                 await ProcessJobAsync(job, stoppingToken);
+                await Delay(2000, stoppingToken);
             }
             catch (Exception ex)
             {
@@ -36,12 +38,12 @@ public class HangfireFilterSimulatorWorker(ReactiveService reactive, ILogger<Han
         // FASE 1: Enqueued (Appena prelevato dalla coda)
         EmitState(job, SampleModel.StateEnum.Enqueued);
         logger.LogInformation("Job {Key}: ENQUEUED", job.Key);
-        await Task.Delay(TimeSpan.FromSeconds(5), token);
+        await Delay(TimeSpan.FromSeconds(5), token);
 
         // FASE 2: Processing (Dopo 5 secondi)
         EmitState(job, SampleModel.StateEnum.Processing);
         logger.LogInformation("Job {Key}: PROCESSING", job.Key);
-        await Task.Delay(TimeSpan.FromSeconds(5), token);
+        await Delay(TimeSpan.FromSeconds(5), token);
 
         // FASE 3: Completed (Dopo altri 5 secondi)
         EmitState(job, SampleModel.StateEnum.Completed);
