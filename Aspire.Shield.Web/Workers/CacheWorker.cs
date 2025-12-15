@@ -1,6 +1,5 @@
 using Aspire.Shield.Web.Services;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
 using static System.Threading.Tasks.Task;
 
 namespace Aspire.Shield.Web.Workers;
@@ -8,25 +7,41 @@ namespace Aspire.Shield.Web.Workers;
 public class CacheWorker(ReactiveService reactive, IDistributedCache cache, ILogger<CacheWorker> logger) : BackgroundService
 {
     private const string CacheKey = "LatestSample";
-
     private IAsyncDisposable? _subscription;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        logger.LogInformation("CacheWorker avviato.");
+
         _subscription = await reactive.Observable.SubscribeAsync(async sample =>
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(sample);
-            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-            await cache.SetAsync(CacheKey, bytes, token: stoppingToken);
+            try 
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(sample);
+                var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+                await cache.SetAsync(CacheKey, bytes, token: stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Errore durante l'aggiornamento della cache.");
+            }
         });
 
         try
         {
             await Delay(Timeout.Infinite, stoppingToken);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
-            // Stop Pulito
+            // Stop grazioso
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Errore imprevisto in CacheWorker.");
+        }
+        finally
+        {
+            logger.LogInformation("CacheWorker arrestato.");
         }
     }
 

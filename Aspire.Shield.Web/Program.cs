@@ -5,19 +5,29 @@ using Aspire.Shield.Web.Services;
 using Aspire.Shield.Web.Workers;
 using Microsoft.EntityFrameworkCore;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("cache");
 builder.AddRedisDistributedCache("cache");
-builder.AddSqlServerDbContext<ApplicationContext>("sampledb");
+// SQL SERVER - MODIFICA QUI
+// Invece di chiamarlo e basta, configuriamo le opzioni di resilienza
+builder.AddSqlServerDbContext<ApplicationContext>("sampledb", settings =>
+{
+    // Abilita i tentativi automatici in caso di fallimento temporaneo
+    settings.DisableRetry = false; 
+    
+    // Aumenta il timeout dei comandi (utile all'avvio quando il PC è sotto carico)
+    settings.CommandTimeout = 45; 
+});
 
 builder.Services.AddSingleton<ReactiveService>();
 builder.Services.AddHostedService<CacheWorker>();
 builder.Services.AddHostedService<SourceWorker>();
 builder.Services.AddHostedService<DatabaseMigrationWorker>();
-builder.Services.AddHostedService<DatabaseProducerWorker>();
+builder.Services.AddHostedService<UserSimulatorWorker>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

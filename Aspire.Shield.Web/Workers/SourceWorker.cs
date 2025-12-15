@@ -10,39 +10,47 @@ public class SourceWorker(ReactiveService reactive, IServiceProvider services, I
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var subscription = Observable.Interval(TimeSpan.FromSeconds(5))
+        logger.LogInformation("SourceWorker avviato.");
+
+        using var subscription = Observable.Interval(TimeSpan.FromSeconds(1))
             .SelectMany(async _ =>
             {
                 try
                 {
-                    using var scope = services.CreateScope();
+                    // Uniformato con CreateAsyncScope
+                    await using var scope = services.CreateAsyncScope();
                     var context = scope.ServiceProvider.GetRequiredService<ApplicationContext>();
 
                     var result = await context.Samples
                         .Select(sample => new SampleModel(sample.BusinessUnit, sample.Branch, sample.Count))
                         .ToListAsync(stoppingToken);
-
+                    
                     return result;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "Errore durante il recupero dei dati dal DB");
                     return [];
                 }
             })
+            .Where(list => list.Count > 0) // Evita di emettere liste vuote in caso di errore
             .SelectMany(list => list)
             .Subscribe(
                 onNext: reactive.OnNext,
-                onError: ex => logger.LogCritical(ex, "Errore critico: lo stream Rx è terminato.") 
+                onError: ex => logger.LogCritical(ex, "Errore critico nello stream Rx.") 
             );
 
         try
         {
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException)
         {
-            // Stop pulito
+            // Stop grazioso
+        }
+        finally
+        {
+            logger.LogInformation("SourceWorker arrestato.");
         }
     }
 }

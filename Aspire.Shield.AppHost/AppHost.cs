@@ -1,31 +1,34 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// --- REDIS (Questo va bene) ---
+// --- REDIS ---
 var cache = builder
     .AddAzureRedis("cache")
     .RunAsContainer(rb => rb
-        .WithRedisInsight()
         .WithLifetime(ContainerLifetime.Persistent)
         .WithDataVolume(isReadOnly: false)
         .WithPersistence(TimeSpan.FromMinutes(1), 100));
 
 // --- SQL SERVER ---
-// 1. Definisci il container fisico (Il Server)
-var sqlServer = builder
-    .AddSqlServer("sqlserver")
-    .WithLifetime(ContainerLifetime.Persistent)
-    .WithDataVolume(); // Volume per il server
+// Usa una sola definizione pulita. 
+// Nota: Se usi AddAzureSqlServer ma vuoi testare in locale, RunAsContainer è corretto.
+// Tuttavia, spesso si usa semplicemente builder.AddSqlServer("sql") per coerenza locale.
+var sqlServer = builder.AddAzureSqlServer("azuresql") 
+    .RunAsContainer(config =>
+    {
+        config.WithLifetime(ContainerLifetime.Persistent); // Ottimo per evitare riavvii lenti
+        config.WithDataVolume();
+    });
 
-// 2. Definisci il database logico collegato a quel server
+// Aggiungi il database all'istanza del server
 var sampleDb = sqlServer.AddDatabase("sampledb");
 
 // --- FRONTEND ---
 builder.AddProject<Projects.Aspire_Shield_Web>("webfrontend")
     .WithExternalHttpEndpoints()
-    .WithHttpHealthCheck("/health")
+    // .WithHttpHealthCheck("/health") // <-- Rimuovi o commenta temporaneamente se fallisce qui
     .WithReference(cache)
-    .WithReference(sampleDb) // Riferisci specificamente il DB, non tutto il server
+    .WithReference(sampleDb)
     .WaitFor(cache)
-    .WaitFor(sqlServer); // Aspetti che il container SQL sia su
+    .WaitFor(sampleDb); // Questo dice ad Aspire di aspettare che il DB sia creato
 
 builder.Build().Run();
