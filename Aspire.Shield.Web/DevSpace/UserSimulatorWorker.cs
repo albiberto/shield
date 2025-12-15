@@ -4,9 +4,42 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aspire.Shield.Web.DevSpace;
 
-public class UserSimulatorWorker(IServiceProvider services, SimulatorOptions options, ILogger<UserSimulatorWorker> logger) : BaseSimulatorWorker(TimeSpan.FromSeconds(1), logger)
+public class UserSimulatorWorker(IServiceProvider services, SimulatorOptions options, ILogger<UserSimulatorWorker> logger) : BackgroundService
 {
-    protected override async Task DoWorkAsync(CancellationToken stoppingToken)
+    private static readonly TimeSpan interval = TimeSpan.FromSeconds(5);
+    
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var workerName = GetType().Name;
+        logger.LogInformation("{WorkerName} avviato (Intervallo: {Interval}s).", workerName, interval.TotalSeconds);
+
+        using var timer = new PeriodicTimer(interval);
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stoppingToken))
+            {
+                try
+                {
+                    await DoWorkAsync(stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Errore durante il ciclo di lavoro di {WorkerName}.", workerName);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Stop grazioso
+        }
+        finally
+        {
+            logger.LogInformation("{WorkerName} arrestato.", workerName);
+        }
+    }
+
+    protected async Task DoWorkAsync(CancellationToken stoppingToken)
     {
         await using var scope = services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationContext>();

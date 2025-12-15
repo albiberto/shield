@@ -7,7 +7,10 @@ namespace Aspire.Shield.Web.Services;
 
 public class ReactiveService : IDisposable
 {
-    private readonly Subject<SampleModel> _subject = new();
+    // ReplaySubject mantiene gli ultimi 50 eventi in buffer
+    // Quando un nuovo subscriber si connette, riceve subito questi eventi
+    // Poi continua a ricevere i nuovi eventi in tempo reale
+    private readonly ReplaySubject<SampleModel> _subject = new(bufferSize: 50);
 
     public IAsyncObservable<SampleModel> Observable => 
         _subject
